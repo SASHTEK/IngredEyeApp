@@ -34,7 +34,7 @@ A cross-platform mobile app that uses your phone's camera to scan barcodes or in
 
 ```bash
 # Clone the repo
-git clone https://github.com/your-username/ingredeye.git
+git clone https://github.com/SASHTEK/IngredEyeApp.git
 cd ingredeye
 
 # Install dependencies
