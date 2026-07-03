@@ -89,7 +89,7 @@ export default function ScanBarcodeScreen() {
       product_name: product?.product_name || "Unknown Product",
       brand: product?.brands || "Unknown Brand",
       batch_id: batchId,
-      items: items.map(i => ({ keyword: i.keyword, risk: i.risk, severity: i.severity })),
+      items: items.map(i => ({ keyword: i.keyword, risk: i.risk, severity: i.severity, e_number: i.e_number, category: i.category, safety_score: i.safety_score, iarc_group: i.iarc_group, pregnancy_safe: i.pregnancy_safe, children_safe: i.children_safe, common_foods: i.common_foods })),
       caption: '',
       is_anonymous: anonymous,
     });

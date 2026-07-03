@@ -167,7 +167,7 @@ export default function ScanScreen() {
       product_name: customProductName || (tempType === 'ocr' ? "Camera Scan" : "Manual Entry"),
       brand: customBrand || "N/A",
       batch_id: currentBatchId,
-      items: items.map(i => ({ keyword: i.keyword, risk: i.risk, severity: i.severity })),
+      items: items.map(i => ({ keyword: i.keyword, risk: i.risk, severity: i.severity, e_number: i.e_number, category: i.category, safety_score: i.safety_score, iarc_group: i.iarc_group, pregnancy_safe: i.pregnancy_safe, children_safe: i.children_safe, common_foods: i.common_foods })),
       caption: '',
       is_anonymous: anonymous,
     });

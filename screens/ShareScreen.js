@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  ActivityIndicator, Alert, Modal, TextInput, RefreshControl
+  ActivityIndicator, Alert, Modal, TextInput, RefreshControl,
+  Keyboard, Platform
 } from 'react-native';
 import { supabase } from '../utils/supabaseClient';
 import { fetchPosts, toggleLike, fetchComments, addComment } from '../utils/communityUtils';
@@ -14,6 +15,7 @@ export default function ShareScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [user, setUser] = useState(null);
   const [showLowPosts, setShowLowPosts] = useState({});
+  const [expandedItems, setExpandedItems] = useState(new Set());
 
   const [commentModalVisible, setCommentModalVisible] = useState(false);
   const [selectedPost, setSelectedPost] = useState(null);
@@ -21,9 +23,18 @@ export default function ShareScreen() {
   const [commentInput, setCommentInput] = useState('');
   const [commentLoading, setCommentLoading] = useState(false);
   const [commentSubmitLoading, setCommentSubmitLoading] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user));
+  }, []);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const onShow = Keyboard.addListener(showEvent, e => setKeyboardHeight(e.endCoordinates.height));
+    const onHide = Keyboard.addListener(hideEvent, () => setKeyboardHeight(0));
+    return () => { onShow.remove(); onHide.remove(); };
   }, []);
 
   useEffect(() => {
@@ -94,6 +105,14 @@ export default function ShareScreen() {
     return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   };
 
+  const toggleItem = (key) => {
+    setExpandedItems(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  };
+
   const getSeverityStyle = (sev) => {
     switch (sev) {
       case 'critical': return { bg: '#ffebee', text: '#c62828' };
@@ -136,12 +155,30 @@ export default function ShareScreen() {
 
         {highItems.map((item, idx) => {
           const sev = getSeverityStyle(item.severity);
+          const key = `${post.id}-${idx}`;
+          const isExpanded = expandedItems.has(key);
+          const displayName = item.e_number ? `${item.e_number} - ${item.keyword}` : item.keyword;
           return (
-            <View key={idx} style={styles.riskItem}>
-              <Text style={styles.riskKeyword}>{item.keyword}</Text>
-              <View style={[styles.severityBadge, { backgroundColor: sev.bg }]}>
-                <Text style={[styles.severityText, { color: sev.text }]}>{item.severity.toUpperCase()}</Text>
-              </View>
+            <View key={key} style={styles.riskItem}>
+              <TouchableOpacity style={styles.itemHeader} onPress={() => toggleItem(key)} activeOpacity={0.7}>
+                <Text style={styles.riskKeyword} numberOfLines={1}>{displayName}</Text>
+                <View style={styles.headerRight}>
+                  <View style={[styles.severityBadge, { backgroundColor: sev.bg }]}>
+                    <Text style={[styles.severityText, { color: sev.text }]}>{item.severity.toUpperCase()}</Text>
+                  </View>
+                  <Text style={styles.expandArrow}>{isExpanded ? '▲' : '▼'}</Text>
+                </View>
+              </TouchableOpacity>
+              {isExpanded && (
+                <View style={styles.moreSection}>
+                  {item.category ? <View style={styles.moreRow}><Text style={styles.moreLabel}>Category:</Text><Text style={styles.moreValue}>{item.category}</Text></View> : null}
+                  {item.safety_score ? <View style={styles.moreRow}><Text style={styles.moreLabel}>Safety:</Text><Text style={styles.moreValue}>{item.safety_score}/10</Text></View> : null}
+                  {item.iarc_group ? <View style={styles.moreRow}><Text style={styles.moreLabel}>Cancer classif.:</Text><Text style={styles.moreValue}>{item.iarc_group}</Text></View> : null}
+                  {item.pregnancy_safe ? <View style={styles.moreRow}><Text style={styles.moreLabel}>Pregnancy:</Text><Text style={styles.moreValue}>{item.pregnancy_safe}</Text></View> : null}
+                  {item.children_safe ? <View style={styles.moreRow}><Text style={styles.moreLabel}>Children:</Text><Text style={styles.moreValue}>{item.children_safe}</Text></View> : null}
+                  {item.common_foods ? <View style={styles.moreRow}><Text style={styles.moreLabel}>Common foods:</Text><Text style={styles.moreValue}>{item.common_foods}</Text></View> : null}
+                </View>
+              )}
             </View>
           );
         })}
@@ -159,12 +196,30 @@ export default function ShareScreen() {
 
         {showLow && lowItems.map((item, idx) => {
           const sev = getSeverityStyle(item.severity);
+          const key = `${post.id}-low-${idx}`;
+          const isExpanded = expandedItems.has(key);
+          const displayName = item.e_number ? `${item.e_number} - ${item.keyword}` : item.keyword;
           return (
-            <View key={`low-${idx}`} style={styles.riskItem}>
-              <Text style={styles.riskKeyword}>{item.keyword}</Text>
-              <View style={[styles.severityBadge, { backgroundColor: sev.bg }]}>
-                <Text style={[styles.severityText, { color: sev.text }]}>{item.severity.toUpperCase()}</Text>
-              </View>
+            <View key={key} style={styles.riskItem}>
+              <TouchableOpacity style={styles.itemHeader} onPress={() => toggleItem(key)} activeOpacity={0.7}>
+                <Text style={styles.riskKeyword} numberOfLines={1}>{displayName}</Text>
+                <View style={styles.headerRight}>
+                  <View style={[styles.severityBadge, { backgroundColor: sev.bg }]}>
+                    <Text style={[styles.severityText, { color: sev.text }]}>{item.severity.toUpperCase()}</Text>
+                  </View>
+                  <Text style={styles.expandArrow}>{isExpanded ? '▲' : '▼'}</Text>
+                </View>
+              </TouchableOpacity>
+              {isExpanded && (
+                <View style={styles.moreSection}>
+                  {item.category ? <View style={styles.moreRow}><Text style={styles.moreLabel}>Category:</Text><Text style={styles.moreValue}>{item.category}</Text></View> : null}
+                  {item.safety_score ? <View style={styles.moreRow}><Text style={styles.moreLabel}>Safety:</Text><Text style={styles.moreValue}>{item.safety_score}/10</Text></View> : null}
+                  {item.iarc_group ? <View style={styles.moreRow}><Text style={styles.moreLabel}>Cancer classif.:</Text><Text style={styles.moreValue}>{item.iarc_group}</Text></View> : null}
+                  {item.pregnancy_safe ? <View style={styles.moreRow}><Text style={styles.moreLabel}>Pregnancy:</Text><Text style={styles.moreValue}>{item.pregnancy_safe}</Text></View> : null}
+                  {item.children_safe ? <View style={styles.moreRow}><Text style={styles.moreLabel}>Children:</Text><Text style={styles.moreValue}>{item.children_safe}</Text></View> : null}
+                  {item.common_foods ? <View style={styles.moreRow}><Text style={styles.moreLabel}>Common foods:</Text><Text style={styles.moreValue}>{item.common_foods}</Text></View> : null}
+                </View>
+              )}
             </View>
           );
         })}
@@ -214,7 +269,7 @@ export default function ShareScreen() {
       )}
 
       <Modal visible={commentModalVisible} transparent animationType="slide">
-        <View style={styles.commentOverlay}>
+        <View style={[styles.commentOverlay, { paddingBottom: keyboardHeight }]}>
           <View style={styles.commentModal}>
             <View style={styles.commentHeader}>
               <Text style={styles.commentTitle}>Comments</Text>
@@ -285,10 +340,17 @@ const styles = StyleSheet.create({
   brand: { fontSize: 13, color: '#666', marginBottom: 10 },
   lowToggle: { paddingVertical: 6, paddingHorizontal: 10, backgroundColor: '#f5f5f5', borderRadius: 8, marginTop: 6, alignSelf: 'flex-start' },
   lowToggleText: { color: '#666', fontWeight: '600', fontSize: 12 },
-  riskItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#f5f5f5' },
-  riskKeyword: { fontSize: 14, fontWeight: '600', color: '#444' },
+  riskItem: { paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#f5f5f5' },
+  itemHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  riskKeyword: { fontSize: 14, fontWeight: '600', color: '#444', flex: 1, marginRight: 8 },
+  headerRight: { flexDirection: 'row', alignItems: 'center' },
   severityBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 12 },
   severityText: { fontSize: 10, fontWeight: 'bold', letterSpacing: 0.5 },
+  expandArrow: { fontSize: 12, color: '#999', marginLeft: 8, fontWeight: '700' },
+  moreSection: { marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#f0f0f0' },
+  moreRow: { flexDirection: 'row', marginBottom: 3, alignItems: 'flex-start' },
+  moreLabel: { fontSize: 12, fontWeight: '700', color: '#666', width: 105 },
+  moreValue: { fontSize: 12, color: '#444', flex: 1 },
   caption: { fontStyle: 'italic', color: '#666', fontSize: 13, marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#f0f0f0' },
   cardActions: { flexDirection: 'row', marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#f0f0f0' },
   actionBtn: { flexDirection: 'row', alignItems: 'center', marginRight: 24 },

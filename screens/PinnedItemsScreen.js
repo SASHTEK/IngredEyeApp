@@ -28,6 +28,7 @@ const [shareBatch, setShareBatch] = useState(null);
 const [shareAnonymous, setShareAnonymous] = useState(false);
 const [shareCaption, setShareCaption] = useState('');
 const [showLowItems, setShowLowItems] = useState(false);
+const [expandedItems, setExpandedItems] = useState(new Set());
 
 const SEVERITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
 
@@ -126,7 +127,7 @@ const SEVERITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
       product_name: shareBatch.product_name || 'Unknown Product',
       brand: shareBatch.brand || 'N/A',
       batch_id: shareBatch.batchId,
-      items: shareBatch.items.map(i => ({ keyword: i.keyword, risk: i.risk, severity: i.severity })),
+      items: shareBatch.items.map(i => ({ keyword: i.keyword, risk: i.risk, severity: i.severity, e_number: i.e_number, category: i.category, safety_score: i.safety_score, iarc_group: i.iarc_group, pregnancy_safe: i.pregnancy_safe, children_safe: i.children_safe, common_foods: i.common_foods })),
       caption: shareCaption,
       is_anonymous: shareAnonymous,
     });
@@ -154,6 +155,14 @@ const SEVERITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
       const hasMatchingSeverity = group.items.some(item => !filterSeverity || item.severity === filterSeverity);
 
       return matchesSearch && hasMatchingSeverity;
+    });
+  };
+
+  const toggleItem = (id) => {
+    setExpandedItems(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
     });
   };
 
@@ -266,18 +275,62 @@ const SEVERITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
 
                 {highItems.map(item => {
                   const sevStyle = getSeverityStyle(item.severity);
+                  const isExpanded = expandedItems.has(item.id);
+                  const displayName = item.e_number ? `${item.e_number} - ${item.keyword}` : item.keyword;
                   return (
-                    <View key={item.id} style={styles.riskCard}>
-                      <Text style={styles.keyword}>{item.keyword}</Text>
-                      <View style={styles.severityWrapper}>
-                        <Text style={styles.severityLabel}>Severity:</Text>
-                        <View style={[styles.severityPill, { backgroundColor: sevStyle.bg }]}>
-                          <Text style={[styles.severityText, { color: sevStyle.text }]}>
-                            {item.severity.toUpperCase()}
-                          </Text>
+                    <View key={item.id} style={[styles.riskCard, { borderLeftColor: sevStyle.text }]}>
+                      <TouchableOpacity style={styles.itemHeader} onPress={() => toggleItem(item.id)} activeOpacity={0.7}>
+                        <Text style={styles.keyword} numberOfLines={1}>{displayName}</Text>
+                        <View style={styles.headerRight}>
+                          <View style={[styles.severityPill, { backgroundColor: sevStyle.bg }]}>
+                            <Text style={[styles.severityText, { color: sevStyle.text }]}>
+                              {item.severity.toUpperCase()}
+                            </Text>
+                          </View>
+                          <Text style={styles.expandArrow}>{isExpanded ? '▲' : '▼'}</Text>
                         </View>
-                      </View>
+                      </TouchableOpacity>
                       <Text style={styles.risk}>{item.risk}</Text>
+                      {isExpanded && (
+                        <View style={styles.moreSection}>
+                          {item.category ? (
+                            <View style={styles.moreRow}>
+                              <Text style={styles.moreLabel}>Category:</Text>
+                              <Text style={styles.moreValue}>{item.category}</Text>
+                            </View>
+                          ) : null}
+                          {item.safety_score ? (
+                            <View style={styles.moreRow}>
+                              <Text style={styles.moreLabel}>Safety:</Text>
+                              <Text style={styles.moreValue}>{item.safety_score}/10</Text>
+                            </View>
+                          ) : null}
+                          {item.iarc_group ? (
+                            <View style={styles.moreRow}>
+                              <Text style={styles.moreLabel}>Cancer classif.:</Text>
+                              <Text style={styles.moreValue}>{item.iarc_group}</Text>
+                            </View>
+                          ) : null}
+                          {item.pregnancy_safe ? (
+                            <View style={styles.moreRow}>
+                              <Text style={styles.moreLabel}>Pregnancy:</Text>
+                              <Text style={styles.moreValue}>{item.pregnancy_safe}</Text>
+                            </View>
+                          ) : null}
+                          {item.children_safe ? (
+                            <View style={styles.moreRow}>
+                              <Text style={styles.moreLabel}>Children:</Text>
+                              <Text style={styles.moreValue}>{item.children_safe}</Text>
+                            </View>
+                          ) : null}
+                          {item.common_foods ? (
+                            <View style={styles.moreRow}>
+                              <Text style={styles.moreLabel}>Common foods:</Text>
+                              <Text style={styles.moreValue}>{item.common_foods}</Text>
+                            </View>
+                          ) : null}
+                        </View>
+                      )}
                     </View>
                   );
                 })}
@@ -291,18 +344,62 @@ const SEVERITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
                     </TouchableOpacity>
                     {showLowItems && lowItems.map(item => {
                       const sevStyle = getSeverityStyle(item.severity);
+                      const isExpanded = expandedItems.has(item.id);
+                      const displayName = item.e_number ? `${item.e_number} - ${item.keyword}` : item.keyword;
                       return (
-                        <View key={item.id} style={styles.riskCard}>
-                          <Text style={styles.keyword}>{item.keyword}</Text>
-                          <View style={styles.severityWrapper}>
-                            <Text style={styles.severityLabel}>Severity:</Text>
-                            <View style={[styles.severityPill, { backgroundColor: sevStyle.bg }]}>
-                              <Text style={[styles.severityText, { color: sevStyle.text }]}>
-                                {item.severity.toUpperCase()}
-                              </Text>
+                        <View key={item.id} style={[styles.riskCard, { borderLeftColor: sevStyle.text }]}>
+                          <TouchableOpacity style={styles.itemHeader} onPress={() => toggleItem(item.id)} activeOpacity={0.7}>
+                            <Text style={styles.keyword} numberOfLines={1}>{displayName}</Text>
+                            <View style={styles.headerRight}>
+                              <View style={[styles.severityPill, { backgroundColor: sevStyle.bg }]}>
+                                <Text style={[styles.severityText, { color: sevStyle.text }]}>
+                                  {item.severity.toUpperCase()}
+                                </Text>
+                              </View>
+                              <Text style={styles.expandArrow}>{isExpanded ? '▲' : '▼'}</Text>
                             </View>
-                          </View>
+                          </TouchableOpacity>
                           <Text style={styles.risk}>{item.risk}</Text>
+                          {isExpanded && (
+                            <View style={styles.moreSection}>
+                              {item.category ? (
+                                <View style={styles.moreRow}>
+                                  <Text style={styles.moreLabel}>Category:</Text>
+                                  <Text style={styles.moreValue}>{item.category}</Text>
+                                </View>
+                              ) : null}
+                              {item.safety_score ? (
+                                <View style={styles.moreRow}>
+                                  <Text style={styles.moreLabel}>Safety:</Text>
+                                  <Text style={styles.moreValue}>{item.safety_score}/10</Text>
+                                </View>
+                              ) : null}
+                              {item.iarc_group ? (
+                                <View style={styles.moreRow}>
+                                  <Text style={styles.moreLabel}>Cancer classif.:</Text>
+                                  <Text style={styles.moreValue}>{item.iarc_group}</Text>
+                                </View>
+                              ) : null}
+                              {item.pregnancy_safe ? (
+                                <View style={styles.moreRow}>
+                                  <Text style={styles.moreLabel}>Pregnancy:</Text>
+                                  <Text style={styles.moreValue}>{item.pregnancy_safe}</Text>
+                                </View>
+                              ) : null}
+                              {item.children_safe ? (
+                                <View style={styles.moreRow}>
+                                  <Text style={styles.moreLabel}>Children:</Text>
+                                  <Text style={styles.moreValue}>{item.children_safe}</Text>
+                                </View>
+                              ) : null}
+                              {item.common_foods ? (
+                                <View style={styles.moreRow}>
+                                  <Text style={styles.moreLabel}>Common foods:</Text>
+                                  <Text style={styles.moreValue}>{item.common_foods}</Text>
+                                </View>
+                              ) : null}
+                            </View>
+                          )}
                         </View>
                       );
                     })}
@@ -422,12 +519,17 @@ const styles = StyleSheet.create({
   brand: { fontSize: 14, color: '#666', marginBottom: 4 },
   timestamp: { fontSize: 11, color: '#999', marginBottom: 15 },
   riskCard: { borderLeftWidth: 4, borderLeftColor: '#e0e0e0', paddingLeft: 12, marginBottom: 15 },
-  keyword: { fontSize: 15, fontWeight: 'bold', color: '#333' },
-  severityWrapper: { flexDirection: 'row', alignItems: 'center', marginVertical: 4 },
-  severityLabel: { color: '#000', fontWeight: 'bold', fontSize: 13, marginRight: 6 },
+  itemHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  keyword: { fontSize: 15, fontWeight: 'bold', color: '#333', flex: 1, marginRight: 8 },
+  headerRight: { flexDirection: 'row', alignItems: 'center' },
   severityPill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 },
   severityText: { fontSize: 12, fontWeight: 'bold', letterSpacing: 0.5 },
-  risk: { fontSize: 14, color: '#444', lineHeight: 20 },
+  expandArrow: { fontSize: 12, color: '#999', marginLeft: 8, fontWeight: '700' },
+  risk: { fontSize: 14, color: '#444', lineHeight: 20, marginTop: 6 },
+  moreSection: { marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#f0f0f0' },
+  moreRow: { flexDirection: 'row', marginBottom: 4, alignItems: 'flex-start' },
+  moreLabel: { fontSize: 13, fontWeight: '700', color: '#666', width: 110 },
+  moreValue: { fontSize: 13, color: '#444', flex: 1 },
   lowToggle: { paddingVertical: 8, paddingHorizontal: 12, backgroundColor: '#f5f5f5', borderRadius: 10, marginTop: 8, alignSelf: 'flex-start' },
   lowToggleText: { color: '#666', fontWeight: '600', fontSize: 13 },
   cardActions: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12, borderTopWidth: 1, borderTopColor: '#f0f0f0', paddingTop: 10 },
