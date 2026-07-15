@@ -17,7 +17,6 @@ function RiskCard({ item, index, isExpanded, onToggle }) {
   return (
     <View style={styles.riskCard}>
       <TouchableOpacity style={styles.cardHeader} onPress={() => onToggle(index)} activeOpacity={0.7}>
-        <Text style={styles.riskKeyword} numberOfLines={1}>{displayName}</Text>
         <View style={styles.headerRight}>
           <View style={[styles.severityPill, { backgroundColor: sev.bg }]}>
             <Text style={[styles.severityText, { color: sev.text }]}>
@@ -26,6 +25,7 @@ function RiskCard({ item, index, isExpanded, onToggle }) {
           </View>
           <Text style={styles.expandArrow}>{isExpanded ? '▲' : '▼'}</Text>
         </View>
+        <Text style={styles.riskKeyword}>{displayName}</Text>
       </TouchableOpacity>
 
       <Text style={styles.riskText}>{String(item.risk || 'No description available.')}</Text>
@@ -164,15 +164,13 @@ const styles = StyleSheet.create({
     elevation: 3,
     borderWidth: 1,
     borderColor: '#f5f5f5',
+    overflow: 'visible',
   },
   cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     marginBottom: 10,
   },
-  riskKeyword: { fontSize: 18, fontWeight: '800', color: '#333', flex: 1, marginRight: 10 },
-  headerRight: { flexDirection: 'row', alignItems: 'center' },
+  riskKeyword: { fontSize: 18, fontWeight: '800', color: '#333', marginTop: 6 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-end', flexShrink: 0 },
   severityPill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 },
   severityText: { fontSize: 12, fontWeight: 'bold', letterSpacing: 0.5 },
   expandArrow: { fontSize: 14, color: '#999', marginLeft: 10, fontWeight: '700' },
@@ -198,6 +196,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#444',
     flex: 1,
+    flexShrink: 1,
   },
   moreSource: {
     fontSize: 12,

@@ -9,6 +9,7 @@ import {
   ActivityIndicator 
 } from 'react-native';
 import { supabase } from '../utils/supabaseClient';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function ProfileScreen({ navigation }) {
   const [user, setUser] = useState(null);
@@ -100,6 +101,18 @@ export default function ProfileScreen({ navigation }) {
           <Text style={styles.errorText}>Could not load profile info.</Text>
         )}
 
+        <View style={styles.menuSection}>
+          <TouchableOpacity style={styles.menuRow} onPress={() => navigation.navigate('Help')} activeOpacity={0.7}>
+            <Text style={styles.menuText}>ℹ️  Help</Text>
+            <Ionicons name="chevron-forward" size={18} color="#ccc" />
+          </TouchableOpacity>
+          <View style={styles.menuDivider} />
+          <TouchableOpacity style={styles.menuRow} onPress={() => navigation.navigate('About')} activeOpacity={0.7}>
+            <Text style={styles.menuText}>📖  About</Text>
+            <Ionicons name="chevron-forward" size={18} color="#ccc" />
+          </TouchableOpacity>
+        </View>
+
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Text style={styles.logoutButtonText}>Logout from IngredEye</Text>
         </TouchableOpacity>
@@ -165,5 +178,25 @@ const styles = StyleSheet.create({
     borderColor: '#ffcdd2',
   },
   logoutButtonText: {color: '#d32f2f', fontSize: 16, fontWeight: 'bold' },
-  errorText: {color: '#999', fontSize: 16 }
+  errorText: {color: '#999', fontSize: 16 },
+  menuSection: {
+    width: '100%',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  menuRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+  },
+  menuText: { fontSize: 15, fontWeight: '600', color: '#333' },
+  menuDivider: { height: 1, backgroundColor: '#f0f0f0' },
 });

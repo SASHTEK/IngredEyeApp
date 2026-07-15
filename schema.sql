@@ -153,3 +153,21 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- 6. USER_COMMUNITY_SEEN TABLE
+-- Tracks when each user last viewed the community feed
+CREATE TABLE user_community_seen (
+  user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  last_seen_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE user_community_seen ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own seen status" ON user_community_seen
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own seen status" ON user_community_seen
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own seen status" ON user_community_seen
+  FOR UPDATE USING (auth.uid() = user_id);

@@ -15,7 +15,6 @@ import {
   Animated
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import * as ImageManipulator from 'expo-image-manipulator';
 import TextRecognition from '@react-native-ml-kit/text-recognition';
 import { supabase } from '../utils/supabaseClient';
 import { generateBatchId, checkIngredientsDb, pinItemsToDb } from '../utils/ingredientUtils';
@@ -70,10 +69,8 @@ export default function ScanScreen() {
     setLoadingMessage('Reading label text...');
 
     try {
-      const manip = await ImageManipulator.manipulateAsync(uri, [{ resize: { width: 800 } }], { format: 'jpeg' });
-      
       setLoadingMessage('Analyzing ingredients...');
-      const result = await TextRecognition.recognize(manip.uri);
+      const result = await TextRecognition.recognize(uri);
       const text = result.text;
       
       setLoadingMessage('Checking safety risks...'); // Status update

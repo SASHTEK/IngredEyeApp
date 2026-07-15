@@ -22,4 +22,36 @@ export const pinItemsToDb = async (user, itemsToPin) => {
   return { success: true };
 };
 
+// Pin items from a community post to user's pinned items
+export const pinFromPost = async (user, post) => {
+  if (!user) return { success: false, error: 'Please log in to pin items.' };
+  if (!post || !post.items) return { success: false, error: 'No items found in this post.' };
+
+  const items = typeof post.items === 'string' ? JSON.parse(post.items) : post.items;
+
+  if (!items || items.length === 0) return { success: false, error: 'No items found in this post.' };
+
+  const batchId = post.batch_id || generateBatchId();
+
+  const itemsToPin = items.map(item => ({
+    user_id: user.id,
+    batch_id: batchId,
+    product_name: post.product_name || 'Unknown Product',
+    brand: post.brand || 'N/A',
+    keyword: item.keyword,
+    risk: item.risk,
+    severity: item.severity,
+    e_number: item.e_number,
+    category: item.category,
+    safety_score: item.safety_score,
+    iarc_group: item.iarc_group,
+    pregnancy_safe: item.pregnancy_safe,
+    children_safe: item.children_safe,
+    common_foods: item.common_foods,
+    source: 'community',
+  }));
+
+  return pinItemsToDb(user, itemsToPin);
+};
+
 

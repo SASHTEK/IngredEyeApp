@@ -4,12 +4,14 @@ import {
   ActivityIndicator, Alert, Modal, TextInput, RefreshControl,
   Keyboard, Platform
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../utils/supabaseClient';
-import { fetchPosts, toggleLike, fetchComments, addComment } from '../utils/communityUtils';
+import { fetchPosts, toggleLike, fetchComments, addComment, fetchUnseenCount, updateLastSeen } from '../utils/communityUtils';
+import { pinFromPost } from '../utils/ingredientUtils';
 
 const SEVERITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
 
-export default function ShareScreen() {
+export default function ShareScreen({ onUnseenCountChange }) {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -24,6 +26,7 @@ export default function ShareScreen() {
   const [commentLoading, setCommentLoading] = useState(false);
   const [commentSubmitLoading, setCommentSubmitLoading] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const { bottom } = useSafeAreaInsets();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user));
@@ -41,11 +44,22 @@ export default function ShareScreen() {
     if (user !== undefined) loadPosts();
   }, [user]);
 
+  useEffect(() => {
+    if (user && onUnseenCountChange) {
+      fetchUnseenCount(user.id).then(count => onUnseenCountChange(count));
+    }
+  }, [user]);
+
+  // Load posts
   const loadPosts = async () => {
     const result = await fetchPosts(user?.id);
     setPosts(result.posts || []);
     setLoading(false);
     setRefreshing(false);
+    if (user) {
+      updateLastSeen(user.id);
+      if (onUnseenCountChange) onUnseenCountChange(0);
+    }
   };
 
   const onRefresh = useCallback(() => {
@@ -53,6 +67,7 @@ export default function ShareScreen() {
     loadPosts();
   }, [user]);
 
+  // Handling LIkes
   const handleLike = async (postId) => {
     if (!user) { Alert.alert('Login Required', 'Sign in to like posts.'); return; }
     const result = await toggleLike(postId, user.id);
@@ -63,6 +78,30 @@ export default function ShareScreen() {
     ));
   };
 
+  // Handling Pins
+  const handlePin = (post) => {
+    if (!user) { Alert.alert('Login Required', 'Sign in to pin items.'); return; }
+    Alert.alert(
+      'Pin to Collection',
+      `Pin "${post.product_name || 'Unknown Product'}" to your pinned items?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Pin',
+          onPress: async () => {
+            const result = await pinFromPost(user, post);
+            if (result.success) {
+              Alert.alert('Pinned!', 'View it in your Pinned tab.');
+            } else {
+              Alert.alert('Error', result.error || 'Failed to pin items. Please try again.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  // Handling Comments
   const openComments = async (post) => {
     setSelectedPost(post);
     setCommentModalVisible(true);
@@ -227,16 +266,22 @@ export default function ShareScreen() {
         {post.caption ? <Text style={styles.caption}>"{post.caption}"</Text> : null}
 
         <View style={styles.cardActions}>
-          <TouchableOpacity style={styles.actionBtn} onPress={() => handleLike(post.id)}>
-            <Text style={[styles.actionIcon, post.userLiked && styles.liked]}>
-              {post.userLiked ? '❤️' : '🤍'}
-            </Text>
-            <Text style={styles.actionCount}>{post.likesCount || 0}</Text>
-          </TouchableOpacity>
+          <View style={styles.cardActionsLeft}>
+            <TouchableOpacity style={styles.actionBtn} onPress={() => handleLike(post.id)}>
+              <Text style={[styles.actionIcon, post.userLiked && styles.liked]}>
+                {post.userLiked ? '❤️' : '🤍'}
+              </Text>
+              <Text style={styles.actionCount}>{post.likesCount || 0}</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity style={styles.actionBtn} onPress={() => openComments(post)}>
-            <Text style={styles.actionIcon}>💬</Text>
-            <Text style={styles.actionCount}>{post.commentsCount || 0}</Text>
+            <TouchableOpacity style={styles.actionBtn} onPress={() => openComments(post)}>
+              <Text style={styles.actionIcon}>💬</Text>
+              <Text style={styles.actionCount}>{post.commentsCount || 0}</Text>
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity style={styles.pinBtn} onPress={() => handlePin(post)}>
+            <Text style={styles.pinIcon}>📌</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -269,7 +314,7 @@ export default function ShareScreen() {
       )}
 
       <Modal visible={commentModalVisible} transparent animationType="slide">
-        <View style={[styles.commentOverlay, { paddingBottom: keyboardHeight }]}>
+        <View style={[styles.commentOverlay, { paddingBottom: keyboardHeight + bottom }]}>
           <View style={styles.commentModal}>
             <View style={styles.commentHeader}>
               <Text style={styles.commentTitle}>Comments</Text>
@@ -352,11 +397,14 @@ const styles = StyleSheet.create({
   moreLabel: { fontSize: 12, fontWeight: '700', color: '#666', width: 105 },
   moreValue: { fontSize: 12, color: '#444', flex: 1 },
   caption: { fontStyle: 'italic', color: '#666', fontSize: 13, marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#f0f0f0' },
-  cardActions: { flexDirection: 'row', marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#f0f0f0' },
+  cardActions: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#f0f0f0' },
+  cardActionsLeft: { flexDirection: 'row', alignItems: 'center' },
   actionBtn: { flexDirection: 'row', alignItems: 'center', marginRight: 24 },
   actionIcon: { fontSize: 16, marginRight: 4 },
   liked: {},
   actionCount: { fontSize: 13, color: '#666', fontWeight: '600' },
+  pinBtn: { padding: 4 },
+  pinIcon: { fontSize: 18 },
   empty: { alignItems: 'center', marginTop: 80 },
   emptyTitle: { fontSize: 18, fontWeight: 'bold', color: '#999' },
   emptySub: { fontSize: 13, color: '#bbb', marginTop: 5 },
